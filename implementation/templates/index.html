@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Export Map as Image - Azure Maps Web SDK Samples</title>
+
+    <meta charset="utf-8" />
+	<link rel="shortcut icon" href="/favicon.ico"/>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="This sample shows how to export the map canvas as an image which can be used in reports or emails." />
+    <meta name="keywords" content="Microsoft maps, map, gis, API, SDK, map image, export image, screenshots, reports, export map, earthquakes, USGS" />
+    <meta name="author" content="Microsoft Azure Maps" /><meta name="version" content="1.0" />
+    <meta name="screenshot" content="screenshot.jpg" />
+
+    <!-- Add references to the Azure Maps Map control JavaScript and CSS files. -->
+    <link href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.css" rel="stylesheet" />
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.js"></script>
+
+    <!-- Optional. Add a reference to the FileSaver library to make it easier to save the image as a PNG file locally. -->
+    <script src="/lib/file-saver/dist/FileSaver.min.js"></script>
+
+    <!-- Add a reference to the Map Image Exporter module. -->
+    <script src="/lib/azure-maps/azure-maps-image-exporter.min.js"></script>
+
+    <script>
+        var map, emailFile;
+
+        function GetMap() {
+            //Initialize a map instance.
+            map = new atlas.Map('myMap', {
+                //This option must be set to true in order to generate an image from the map canvas.
+                preserveDrawingBuffer: true,
+                view: 'Auto',
+
+                //Add authentication details for connecting to Azure Maps.
+                authOptions: {
+                    authType: 'subscriptionKey',
+                    subscriptionKey: '[Place Key Here]'
+                }
+});
+
+            //Wait until the map resources are ready.
+            map.events.add('ready', function () {
+                //Load some sample data for testing.
+            });
+        }
+
+        function downloadMapImage() {
+            html2canvas(document.querySelector("#myMap")).then(function(canvas) {
+                console.log(canvas);
+                simulateDownloadImageClick(canvas.toDataURL(), 'file-name.png');
+            });
+        }
+
+        function loadSampleData() {
+            map.controls.add(new atlas.control.StyleControl({
+                style: 'dark',
+                mapStyles: 'all'
+            }), {
+                position: 'top-right'
+            });
+
+            datasource = new atlas.source.DataSource();
+            map.sources.add(datasource);
+
+            datasource.importDataFromUrl('http://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GPW4_GLOBE_R2015A/GHS_POP_GPW41975_GLOBE_R2015A_54009_1k/V1-0/');
+
+            map.layers.add(new atlas.layer.HeatMapLayer(datasource, null, {
+                radius: 20,
+                opacity: 0.8
+            }), 'labels');
+
+            map.layers.add([
+                new atlas.layer.BubbleLayer(datasource, 'earthquake-circles', {
+                    createIndicators: true, // to enable bubble layer a11y feature
+                    opacity: 0.75,
+
+                    color: [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'mag'],
+                        0, 'green',
+                        5, 'yellow',
+                        6, 'orange',
+                        7, 'red'
+                    ],
+
+                    radius: [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'mag'],
+                        0, 2,
+                        8, 20
+                    ]
+                }),
+
+                new atlas.layer.SymbolLayer(datasource, 'earthquake-labels', {
+                    iconOptions: {
+                        image: 'none'
+                    },
+                    textOptions: {
+                        textField: ['concat', ['to-string', ['get', 'mag']], 'm'],
+                        textSize: 12
+                    }
+                })
+            ]);
+        }
+    </script>
+</head>
+<body onload="GetMap()">
+    <div style="height:600px;">
+        <div id="myMap" style="position:relative;width:calc(50% - 10px);height:600px;float:left;"></div>
+        <div id="output" style="float:left;margin-left:10px;"></div>
+    </div>
+    <br />
+    Create Map Image and:
+    <input type="button" value="Download" onclick="downloadMapImage();" />
+    <button> <a href="/my-link/">Click me</a></button>
+</body>
+</html>
